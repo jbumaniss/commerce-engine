@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Catalog\Presentation\Api;
 
 use App\Catalog\Application\Command\UpdateProduct;
-use App\Catalog\Application\Command\UpdateProductHandler;
+use App\Catalog\Domain\Entity\Product;
+use App\Shared\Application\CommandBus;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -14,7 +15,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final readonly class UpdateProductController
 {
     public function __construct(
-        private UpdateProductHandler $handler,
+        private CommandBus $commandBus,
     ) {
     }
 
@@ -23,7 +24,7 @@ final readonly class UpdateProductController
         int $id,
         #[MapRequestPayload] UpdateProductRequest $request,
     ): JsonResponse {
-        $product = ($this->handler)(new UpdateProduct(
+        $product = $this->commandBus->handle(new UpdateProduct(
             id: $id,
             name: $request->name,
             slug: $request->slug,
@@ -32,7 +33,7 @@ final readonly class UpdateProductController
             description: $request->description,
         ));
 
-        if (null === $product) {
+        if (!$product instanceof Product) {
             throw new NotFoundHttpException('Product not found.');
         }
 
