@@ -13,8 +13,8 @@ Compact ticket roadmap for the Catalog/Product API. Status: `Completed` / `In pr
 | CE-006 | List products | Completed | List active products | `GET /api/products` | CE-003 |
 | CE-007 | Update product | Completed | Full replace of editable fields (name, slug, priceAmount, currency, description); `isActive` unchanged | `PUT /api/products/{id}` | CE-005 |
 | CE-008 | Activate/deactivate product | Completed | Product status transitions (reuses `Product::activate()`/`deactivate()`) | `POST /api/products/{id}/activate`, `POST /api/products/{id}/deactivate` | CE-005 |
-| CE-009 | Delete product | In progress | Remove a product | `DELETE /api/products/{id}` | CE-005 |
-| CE-010 | Product API cleanup | Planned | Shared response mapping, error shape, edge cases | — | CE-007, CE-008, CE-009 |
+| CE-009 | Delete product | Completed | Hard delete a product; 204 on success, 404 when missing | `DELETE /api/products/{id}` | CE-005 |
+| CE-010 | Product API cleanup | In progress | Shared response mapping, error shape, edge cases | — | CE-007, CE-008, CE-009 |
 
 ## Conventions
 

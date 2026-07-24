@@ -10,6 +10,8 @@ interface ProductRepositoryInterface
 {
     public function save(Product $product): void;
 
+    public function remove(Product $product): void;
+
     public function findById(int $id): ?Product;
 
     public function findBySlug(string $slug): ?Product;
