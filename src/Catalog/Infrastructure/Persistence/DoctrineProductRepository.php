@@ -34,4 +34,13 @@ final readonly class DoctrineProductRepository implements ProductRepositoryInter
                 'slug' => $slug,
             ]);
     }
+
+    public function findAllActive(): array
+    {
+        return $this->entityManager
+            ->getRepository(Product::class)
+            ->findBy([
+                'isActive' => true,
+            ]);
+    }
 }

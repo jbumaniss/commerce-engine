@@ -13,4 +13,9 @@ interface ProductRepositoryInterface
     public function findById(int $id): ?Product;
 
     public function findBySlug(string $slug): ?Product;
+
+    /**
+     * @return Product[]
+     */
+    public function findAllActive(): array;
 }
