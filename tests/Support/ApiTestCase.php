@@ -34,6 +34,20 @@ abstract class ApiTestCase extends WebTestCase
     }
 
     /**
+     * @param array<string, mixed> $payload
+     *
+     * @return array<string, mixed>
+     *
+     * @throws \JsonException
+     */
+    protected function putJson(string $uri, array $payload): array
+    {
+        $this->client->jsonRequest('PUT', $uri, $payload);
+
+        return $this->json();
+    }
+
+    /**
      * @return array<string, mixed>
      *
      * @throws \JsonException

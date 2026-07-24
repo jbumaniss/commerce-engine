@@ -105,6 +105,21 @@ class Product
         return $this->updatedAt;
     }
 
+    public function update(
+        string $name,
+        string $slug,
+        int $priceAmount,
+        string $currency,
+        ?string $description = null,
+    ): void {
+        $this->name = self::normalizeName($name);
+        $this->slug = self::normalizeSlug($slug);
+        $this->priceAmount = self::validatePriceAmount($priceAmount);
+        $this->currency = self::normalizeCurrency($currency);
+        $this->description = self::normalizeDescription($description);
+        $this->touch();
+    }
+
     public function activate(): void
     {
         if ($this->isActive) {
