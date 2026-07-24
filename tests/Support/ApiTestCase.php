@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use JsonException;
 use PHPUnit\Framework\Assert;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -24,7 +23,8 @@ abstract class ApiTestCase extends WebTestCase
      * @param array<string, mixed> $payload
      *
      * @return array<string, mixed>
-     * @throws JsonException
+     *
+     * @throws \JsonException
      */
     protected function postJson(string $uri, array $payload): array
     {
@@ -35,7 +35,8 @@ abstract class ApiTestCase extends WebTestCase
 
     /**
      * @return array<string, mixed>
-     * @throws JsonException
+     *
+     * @throws \JsonException
      */
     protected function getJson(string $uri): array
     {
@@ -46,7 +47,8 @@ abstract class ApiTestCase extends WebTestCase
 
     /**
      * @return array<string, mixed>
-     * @throws JsonException
+     *
+     * @throws \JsonException
      */
     protected function json(): array
     {
