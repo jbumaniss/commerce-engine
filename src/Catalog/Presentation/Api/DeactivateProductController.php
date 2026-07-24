@@ -26,16 +26,6 @@ final readonly class DeactivateProductController
             throw new NotFoundHttpException('Product not found.');
         }
 
-        return new JsonResponse([
-            'id' => $product->id(),
-            'name' => $product->name(),
-            'slug' => $product->slug(),
-            'priceAmount' => $product->priceAmount(),
-            'currency' => $product->currency(),
-            'description' => $product->description(),
-            'isActive' => $product->isActive(),
-            'createdAt' => $product->createdAt()->format(\DateTimeInterface::ATOM),
-            'updatedAt' => $product->updatedAt()->format(\DateTimeInterface::ATOM),
-        ]);
+        return new JsonResponse(ProductResponse::fromProduct($product));
     }
 }

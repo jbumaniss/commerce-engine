@@ -30,17 +30,7 @@ final readonly class CreateProductController
         ));
 
         return new JsonResponse(
-            data: [
-                'id' => $product->id(),
-                'name' => $product->name(),
-                'slug' => $product->slug(),
-                'priceAmount' => $product->priceAmount(),
-                'currency' => $product->currency(),
-                'description' => $product->description(),
-                'isActive' => $product->isActive(),
-                'createdAt' => $product->createdAt()->format(\DateTimeInterface::ATOM),
-                'updatedAt' => $product->updatedAt()->format(\DateTimeInterface::ATOM),
-            ],
+            data: ProductResponse::fromProduct($product),
             status: JsonResponse::HTTP_CREATED,
         );
     }

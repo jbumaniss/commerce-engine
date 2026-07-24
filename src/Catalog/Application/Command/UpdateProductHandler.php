@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Catalog\Application\Command;
 
+use App\Catalog\Application\Exception\ProductSlugAlreadyExists;
 use App\Catalog\Domain\Entity\Product;
 use App\Catalog\Domain\Repository\ProductRepositoryInterface;
 
@@ -20,6 +21,12 @@ final readonly class UpdateProductHandler
 
         if (null === $product) {
             return null;
+        }
+
+        $existing = $this->products->findBySlug($command->slug);
+
+        if (null !== $existing && $existing->id() !== $command->id) {
+            throw ProductSlugAlreadyExists::withSlug($command->slug);
         }
 
         $product->update(

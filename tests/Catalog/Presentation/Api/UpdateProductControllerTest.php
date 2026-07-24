@@ -96,6 +96,69 @@ final class UpdateProductControllerTest extends ApiTestCase
         $this->assertStatusCode(422);
     }
 
+    public function testItRejectsAnotherProductsSlug(): void
+    {
+        $this->postJson('/api/products', [
+            'name' => 'PlayStation 5',
+            'slug' => 'playstation-5',
+            'priceAmount' => 49999,
+            'currency' => 'EUR',
+            'description' => 'Current-generation console.',
+        ]);
+
+        $this->assertCreated();
+
+        $other = $this->postJson('/api/products', [
+            'name' => 'Xbox Series X',
+            'slug' => 'xbox-series-x',
+            'priceAmount' => 47999,
+            'currency' => 'EUR',
+            'description' => 'Current-generation console.',
+        ]);
+
+        $this->assertCreated();
+
+        $this->client->jsonRequest('PUT', sprintf('/api/products/%d', $other['id']), [
+            'name' => 'Xbox Series X',
+            'slug' => 'playstation-5',
+            'priceAmount' => 47999,
+            'currency' => 'EUR',
+            'description' => 'Current-generation console.',
+        ]);
+
+        $this->assertStatusCode(409);
+    }
+
+    public function testItAllowsUpdatingAProductWithItsOwnSlug(): void
+    {
+        $created = $this->postJson('/api/products', [
+            'name' => 'PlayStation 5',
+            'slug' => 'playstation-5',
+            'priceAmount' => 49999,
+            'currency' => 'EUR',
+            'description' => 'Current-generation console.',
+        ]);
+
+        $this->assertCreated();
+
+        $updated = $this->putJson(sprintf('/api/products/%d', $created['id']), [
+            'name' => 'PlayStation 5 Slim',
+            'slug' => 'playstation-5',
+            'priceAmount' => 44999,
+            'currency' => 'EUR',
+            'description' => 'Slimmer revision.',
+        ]);
+
+        $this->assertOk();
+
+        $this->assertJsonContains([
+            'id' => $created['id'],
+            'name' => 'PlayStation 5 Slim',
+            'slug' => 'playstation-5',
+            'priceAmount' => 44999,
+        ], $updated);
+    }
+
     public function testItKeepsTheProductInactiveWhenUpdating(): void
     {
         $product = new Product(
