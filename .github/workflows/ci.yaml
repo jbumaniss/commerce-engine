@@ -58,7 +58,7 @@ jobs:
       # - name: Doctrine Schema Validator
       #   run: docker compose exec -T php bin/console -e test doctrine:schema:validate
       - name: Run PHPStan
-        run: docker compose exec -T php composer phpstan
+        run: docker compose exec -T php composer phpstan -- --memory-limit=512M
       - name: Check coding standards
         run: docker compose exec -T php composer cs
   lint:
