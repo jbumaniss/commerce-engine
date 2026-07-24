@@ -6,6 +6,7 @@ namespace App\Catalog\Application\Query;
 
 use App\Catalog\Domain\Entity\Product;
 use App\Catalog\Domain\Repository\ProductRepositoryInterface;
+use App\Shared\Application\Paginated;
 
 final readonly class ListProductsHandler
 {
@@ -15,10 +16,17 @@ final readonly class ListProductsHandler
     }
 
     /**
-     * @return Product[]
+     * @return Paginated<Product>
      */
-    public function __invoke(ListProducts $query): array
+    public function __invoke(ListProducts $query): Paginated
     {
-        return $this->products->findAllActive();
+        $offset = ($query->page - 1) * $query->perPage;
+
+        return new Paginated(
+            $this->products->findActive($query->perPage, $offset),
+            $query->page,
+            $query->perPage,
+            $this->products->countActive(),
+        );
     }
 }

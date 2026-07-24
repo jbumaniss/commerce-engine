@@ -19,5 +19,7 @@ interface ProductRepositoryInterface
     /**
      * @return Product[]
      */
-    public function findAllActive(): array;
+    public function findActive(int $limit, int $offset): array;
+
+    public function countActive(): int;
 }
