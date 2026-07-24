@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Catalog\Infrastructure\Persistence;
 
+use App\Catalog\Application\Exception\ProductWasConcurrentlyModified;
 use App\Catalog\Domain\Entity\Product;
 use App\Catalog\Domain\Repository\ProductRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\OptimisticLockException;
 
 final readonly class DoctrineProductRepository implements ProductRepositoryInterface
 {
@@ -18,7 +20,12 @@ final readonly class DoctrineProductRepository implements ProductRepositoryInter
     public function save(Product $product): void
     {
         $this->entityManager->persist($product);
-        $this->entityManager->flush();
+
+        try {
+            $this->entityManager->flush();
+        } catch (OptimisticLockException) {
+            throw ProductWasConcurrentlyModified::create();
+        }
     }
 
     public function remove(Product $product): void
