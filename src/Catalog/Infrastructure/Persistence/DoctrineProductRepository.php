@@ -21,6 +21,12 @@ final readonly class DoctrineProductRepository implements ProductRepositoryInter
         $this->entityManager->flush();
     }
 
+    public function remove(Product $product): void
+    {
+        $this->entityManager->remove($product);
+        $this->entityManager->flush();
+    }
+
     public function findById(int $id): ?Product
     {
         return $this->entityManager->find(Product::class, $id);
