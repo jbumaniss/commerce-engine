@@ -35,6 +35,10 @@ class Product
     #[ORM\Column]
     private bool $isActive;
 
+    #[ORM\Version]
+    #[ORM\Column(type: Types::INTEGER)]
+    private int $version = 1;
+
     #[ORM\Column]
     private readonly \DateTimeImmutable $createdAt;
 
@@ -93,6 +97,11 @@ class Product
     public function isActive(): bool
     {
         return $this->isActive;
+    }
+
+    public function version(): int
+    {
+        return $this->version;
     }
 
     public function createdAt(): \DateTimeImmutable
