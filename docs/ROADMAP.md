@@ -7,10 +7,10 @@ later tickets depend only on earlier ones, ending at a production-ready **Commer
 
 ## Roadmap Progress
 
-- Completed: 12
+- Completed: 15
 - In Progress: 1 (CE-013)
-- Planned: 123
-- Current Ticket: CE-013
+- Planned: 120
+- Current Ticket: CE-017
 
 Operations that must be consistent within a request run **synchronously** in a DB
 transaction; eventually-consistent side effects run **asynchronously** via Symfony Messenger
@@ -32,9 +32,9 @@ SQS-compatible transport in production, interchangeable via configuration only.
 | CE-011 | API: Error format consistency | Completed | RFC 7807 `application/problem+json` for all `/api/` errors (404/409/422/5xx) via a shared exception listener. | — | CE-010 |
 | CE-012 | Product: List pagination | Completed | `page`/`perPage` (validated) with `items`/`page`/`perPage`/`total`/`totalPages` metadata; `id ASC` order. | `GET /api/products` | CE-006 |
 | CE-013 | Product: List filtering & sorting | In Progress | Optional filters (name/slug/isActive) and client-selectable sort on the paginated list. | `GET /api/products` | CE-012 |
-| CE-014 | Product: Optimistic locking | Planned | Add a Doctrine version field to `Product`; a concurrent update returns 409 Conflict. | `PUT /api/products/{id}` | CE-007 |
-| CE-015 | Product: Read caching | Planned | HTTP caching (ETag/Last-Modified) for product reads, invalidated on writes. | `GET /api/products`, `GET /api/products/{id}` | CE-010 |
-| CE-016 | Product: OpenAPI specification | Planned | Document every product endpoint (schemas, params, error shapes) as OpenAPI. | — | CE-013 |
+| CE-014 | Product: Optimistic locking | Completed | Add a Doctrine version field to `Product`; a concurrent update returns 409 Conflict. | `PUT /api/products/{id}` | CE-007 |
+| CE-015 | Product: Read caching | Completed | HTTP caching (ETag/Last-Modified) for product reads, invalidated on writes. | `GET /api/products`, `GET /api/products/{id}` | CE-010 |
+| CE-016 | Product: OpenAPI specification | Completed | Document every product endpoint (schemas, params, error shapes) as OpenAPI. | — | CE-013 |
 | CE-017 | Product: Regression suite | Planned | End-to-end functional and contract tests guarding the product API surface. | — | CE-013 |
 | CE-018 | Messaging: Symfony Messenger introduction | Planned | Install Messenger and route existing writes through a synchronous command bus. | — | CE-010 |
 | CE-019 | Messaging: Command & event bus separation | Planned | Separate a synchronous command bus from an asynchronous event bus, following CQRS conventions. | — | CE-018 |
