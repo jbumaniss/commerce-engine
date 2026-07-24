@@ -6,7 +6,9 @@ namespace App\Catalog\Application\Command;
 
 use App\Catalog\Domain\Entity\Product;
 use App\Catalog\Domain\Repository\ProductRepositoryInterface;
+use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
+#[AsMessageHandler]
 final readonly class ChangeProductActivationHandler
 {
     public function __construct(

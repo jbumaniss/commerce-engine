@@ -1,0 +1,8 @@
+framework:
+    messenger:
+        # A single, synchronous command bus: with no transports configured, dispatched
+        # commands are handled in-process within the same request (CE-018). Asynchronous
+        # transports are introduced later (CE-020+).
+        default_bus: command.bus
+        buses:
+            command.bus: ~
