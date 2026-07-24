@@ -15,8 +15,8 @@ Compact ticket roadmap for the Catalog/Product API. Status: `Completed` / `In pr
 | CE-008 | Activate/deactivate product | Completed | Product status transitions (reuses `Product::activate()`/`deactivate()`) | `POST /api/products/{id}/activate`, `POST /api/products/{id}/deactivate` | CE-005 |
 | CE-009 | Delete product | Completed | Hard delete a product; 204 on success, 404 when missing | `DELETE /api/products/{id}` | CE-005 |
 | CE-010 | Product API cleanup | Completed | Shared `ProductResponse` mapper; duplicate-slug → 409 on Create/Update | — | CE-007, CE-008, CE-009 |
-| CE-011 | API error format consistency | Planned | Consistent JSON error bodies (e.g. RFC 7807) for 404/409/422 — success is JSON, errors are not | — | CE-010 |
-| CE-012 | Product list pagination & filtering | Planned | Bound and page the unbounded list endpoint; optional filters | `GET /api/products` | CE-006 |
+| CE-011 | API error format consistency | Completed | RFC 7807 `application/problem+json` for all `/api/` errors (404/409/422/5xx) via a shared exception listener | — | CE-010 |
+| CE-012 | Product list pagination & filtering | In progress | Bound and page the unbounded list endpoint; optional filters | `GET /api/products` | CE-006 |
 
 ## Conventions
 
