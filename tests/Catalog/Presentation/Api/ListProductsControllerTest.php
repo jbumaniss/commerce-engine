@@ -183,6 +183,53 @@ final class ListProductsControllerTest extends ApiTestCase
         $this->assertStatusCode(422);
     }
 
+    public function testItExposesAnEtagForTheList(): void
+    {
+        $this->createProduct('playstation-5', 'PlayStation 5');
+
+        $this->client->request('GET', '/api/products');
+
+        $this->assertOk();
+
+        self::assertNotNull($this->client->getResponse()->getEtag());
+    }
+
+    public function testItReturnsNotModifiedWhenTheListIsUnchanged(): void
+    {
+        $this->createProduct('playstation-5', 'PlayStation 5');
+
+        $this->client->request('GET', '/api/products');
+
+        $this->assertOk();
+
+        $etag = $this->client->getResponse()->getEtag();
+
+        self::assertNotNull($etag);
+
+        $this->client->request('GET', '/api/products', server: ['HTTP_IF_NONE_MATCH' => $etag]);
+
+        $this->assertStatusCode(304);
+        self::assertEmpty($this->client->getResponse()->getContent());
+    }
+
+    public function testTheListEtagChangesWhenAProductIsAdded(): void
+    {
+        $this->createProduct('playstation-5', 'PlayStation 5');
+
+        $this->client->request('GET', '/api/products');
+
+        $staleEtag = $this->client->getResponse()->getEtag();
+
+        self::assertNotNull($staleEtag);
+
+        $this->createProduct('xbox-series-x', 'Xbox Series X');
+
+        $this->client->request('GET', '/api/products', server: ['HTTP_IF_NONE_MATCH' => $staleEtag]);
+
+        $this->assertOk();
+        self::assertNotSame($staleEtag, $this->client->getResponse()->getEtag());
+    }
+
     private function createProduct(string $slug, ?string $name = null): void
     {
         $this->postJson('/api/products', [
