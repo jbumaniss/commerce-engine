@@ -118,6 +118,74 @@ final class ProductTest extends TestCase
         self::assertSame($updatedAt, $product->updatedAt());
     }
 
+    public function testItUpdatesProductData(): void
+    {
+        $product = $this->createProduct();
+
+        $product->update(
+            name: 'Xbox Series X',
+            slug: 'xbox-series-x',
+            priceAmount: 47999,
+            currency: 'USD',
+            description: 'Updated description.',
+        );
+
+        self::assertSame('Xbox Series X', $product->name());
+        self::assertSame('xbox-series-x', $product->slug());
+        self::assertSame(47999, $product->priceAmount());
+        self::assertSame('USD', $product->currency());
+        self::assertSame('Updated description.', $product->description());
+    }
+
+    public function testItNormalizesDataWhenUpdated(): void
+    {
+        $product = $this->createProduct();
+
+        $product->update(
+            name: '  Xbox  ',
+            slug: '  xbox  ',
+            priceAmount: 100,
+            currency: ' usd ',
+            description: '   ',
+        );
+
+        self::assertSame('Xbox', $product->name());
+        self::assertSame('xbox', $product->slug());
+        self::assertSame('USD', $product->currency());
+        self::assertNull($product->description());
+    }
+
+    public function testItRejectsAnEmptyNameWhenUpdated(): void
+    {
+        $product = $this->createProduct();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Product name cannot be empty.');
+
+        $product->update(
+            name: '   ',
+            slug: 'xbox',
+            priceAmount: 100,
+            currency: 'USD',
+        );
+    }
+
+    public function testItKeepsCreationTimeAndActiveStateWhenUpdated(): void
+    {
+        $product = $this->createProduct();
+        $createdAt = $product->createdAt();
+
+        $product->update(
+            name: 'Xbox',
+            slug: 'xbox',
+            priceAmount: 100,
+            currency: 'USD',
+        );
+
+        self::assertSame($createdAt, $product->createdAt());
+        self::assertTrue($product->isActive());
+    }
+
     public function testItRejectsAnEmptyName(): void
     {
         $this->expectException(\InvalidArgumentException::class);
