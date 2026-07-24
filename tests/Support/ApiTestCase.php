@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use JsonException;
 use PHPUnit\Framework\Assert;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -19,6 +20,12 @@ abstract class ApiTestCase extends WebTestCase
         $this->client = static::createClient();
     }
 
+    /**
+     * @param array<string, mixed> $payload
+     *
+     * @return array<string, mixed>
+     * @throws JsonException
+     */
     protected function postJson(string $uri, array $payload): array
     {
         $this->client->jsonRequest('POST', $uri, $payload);
@@ -26,6 +33,10 @@ abstract class ApiTestCase extends WebTestCase
         return $this->json();
     }
 
+    /**
+     * @return array<string, mixed>
+     * @throws JsonException
+     */
     protected function getJson(string $uri): array
     {
         $this->client->request('GET', $uri);
@@ -33,6 +44,10 @@ abstract class ApiTestCase extends WebTestCase
         return $this->json();
     }
 
+    /**
+     * @return array<string, mixed>
+     * @throws JsonException
+     */
     protected function json(): array
     {
         $response = $this->client->getResponse();
@@ -45,11 +60,19 @@ abstract class ApiTestCase extends WebTestCase
             ),
         );
 
-        return json_decode(
-            $response->getContent(),
+        $content = $response->getContent();
+
+        Assert::assertIsString($content);
+
+        $data = json_decode(
+            $content,
             true,
             flags: \JSON_THROW_ON_ERROR,
         );
+
+        Assert::assertIsArray($data);
+
+        return $data;
     }
 
     protected function assertStatusCode(int $status): void
@@ -67,6 +90,10 @@ abstract class ApiTestCase extends WebTestCase
         $this->assertStatusCode(200);
     }
 
+    /**
+     * @param array<string, mixed> $expected
+     * @param array<string, mixed> $actual
+     */
     protected function assertJsonContains(array $expected, array $actual): void
     {
         foreach ($expected as $key => $value) {

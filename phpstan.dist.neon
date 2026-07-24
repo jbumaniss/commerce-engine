@@ -6,3 +6,7 @@ parameters:
         - public/
         - src/
         - tests/
+    ignoreErrors:
+            -
+                identifier: method.unused
+                path: src/Kernel.php
