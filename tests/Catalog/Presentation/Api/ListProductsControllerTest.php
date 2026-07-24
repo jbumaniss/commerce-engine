@@ -10,96 +10,51 @@ use App\Tests\Support\ApiTestCase;
 
 final class ListProductsControllerTest extends ApiTestCase
 {
-    public function testItReturnsAnEmptyArrayWhenNoProductsExist(): void
+    public function testItReturnsAnEmptyFirstPageWhenNoProductsExist(): void
     {
-        $products = $this->getJson('/api/products');
+        $data = $this->getJson('/api/products');
 
         $this->assertOk();
 
-        self::assertSame([], $products);
+        self::assertSame([], $data['items']);
+        self::assertSame(1, $data['page']);
+        self::assertSame(20, $data['perPage']);
+        self::assertSame(0, $data['total']);
+        self::assertSame(0, $data['totalPages']);
     }
 
-    public function testItReturnsASingleProduct(): void
+    public function testItReturnsASingleProductWithMetadata(): void
     {
-        $this->postJson('/api/products', [
-            'name' => 'PlayStation 5',
-            'slug' => 'playstation-5',
-            'priceAmount' => 49999,
-            'currency' => 'EUR',
-            'description' => 'Current-generation console.',
-        ]);
+        $this->createProduct('playstation-5', 'PlayStation 5');
 
-        $this->assertCreated();
-
-        $products = $this->getJson('/api/products');
+        $data = $this->getJson('/api/products');
 
         $this->assertOk();
 
-        self::assertCount(1, $products);
+        self::assertSame(1, $data['total']);
+        self::assertSame(1, $data['totalPages']);
 
-        foreach ($products as $product) {
-            /* @var array<string, mixed> $product */
+        $items = $data['items'];
+
+        self::assertIsArray($items);
+        self::assertCount(1, $items);
+
+        foreach ($items as $item) {
+            /* @var array<string, mixed> $item */
             $this->assertJsonContains([
                 'name' => 'PlayStation 5',
                 'slug' => 'playstation-5',
-                'priceAmount' => 49999,
-                'currency' => 'EUR',
-                'description' => 'Current-generation console.',
                 'isActive' => true,
-            ], $product);
+            ], $item);
 
-            self::assertIsInt($product['id']);
-            self::assertNotEmpty($product['createdAt']);
-            self::assertNotEmpty($product['updatedAt']);
+            self::assertIsInt($item['id']);
+            self::assertNotEmpty($item['createdAt']);
         }
     }
 
-    public function testItReturnsMultipleProducts(): void
+    public function testItExcludesInactiveProductsFromThePageAndTotal(): void
     {
-        $this->postJson('/api/products', [
-            'name' => 'PlayStation 5',
-            'slug' => 'playstation-5',
-            'priceAmount' => 49999,
-            'currency' => 'EUR',
-            'description' => 'Current-generation console.',
-        ]);
-
-        $this->postJson('/api/products', [
-            'name' => 'Xbox Series X',
-            'slug' => 'xbox-series-x',
-            'priceAmount' => 47999,
-            'currency' => 'EUR',
-            'description' => 'Current-generation console.',
-        ]);
-
-        $products = $this->getJson('/api/products');
-
-        $this->assertOk();
-
-        self::assertCount(2, $products);
-
-        $slugs = [];
-
-        foreach ($products as $product) {
-            /* @var array<string, mixed> $product */
-            $slugs[] = $product['slug'];
-        }
-
-        self::assertContains('playstation-5', $slugs);
-        self::assertContains('xbox-series-x', $slugs);
-    }
-
-    public function testItExcludesInactiveProducts(): void
-    {
-        $this->postJson('/api/products', [
-            'name' => 'PlayStation 5',
-            'slug' => 'playstation-5',
-            'priceAmount' => 49999,
-            'currency' => 'EUR',
-            'description' => 'Current-generation console.',
-        ]);
-
-        $this->assertCreated();
+        $this->createProduct('playstation-5', 'PlayStation 5');
 
         $inactive = new Product(
             name: 'Retro Console',
@@ -111,17 +66,151 @@ final class ListProductsControllerTest extends ApiTestCase
 
         $this->repository()->save($inactive);
 
-        $products = $this->getJson('/api/products');
+        $data = $this->getJson('/api/products');
 
         $this->assertOk();
 
-        self::assertCount(1, $products);
+        self::assertSame(1, $data['total']);
 
-        foreach ($products as $product) {
-            /* @var array<string, mixed> $product */
-            self::assertSame('playstation-5', $product['slug']);
-            self::assertTrue($product['isActive']);
+        $items = $data['items'];
+
+        self::assertIsArray($items);
+        self::assertCount(1, $items);
+
+        foreach ($items as $item) {
+            /* @var array<string, mixed> $item */
+            self::assertSame('playstation-5', $item['slug']);
         }
+    }
+
+    public function testItReturnsTheFirstPage(): void
+    {
+        $this->createProduct('product-a');
+        $this->createProduct('product-b');
+        $this->createProduct('product-c');
+
+        $data = $this->getJson('/api/products?page=1&perPage=2');
+
+        $this->assertOk();
+
+        self::assertSame(1, $data['page']);
+        self::assertSame(2, $data['perPage']);
+        self::assertSame(3, $data['total']);
+        self::assertSame(2, $data['totalPages']);
+
+        $items = $data['items'];
+
+        self::assertIsArray($items);
+        self::assertCount(2, $items);
+
+        self::assertSame(['product-a', 'product-b'], $this->slugs($items));
+    }
+
+    public function testItReturnsTheSecondPage(): void
+    {
+        $this->createProduct('product-a');
+        $this->createProduct('product-b');
+        $this->createProduct('product-c');
+
+        $data = $this->getJson('/api/products?page=2&perPage=2');
+
+        $this->assertOk();
+
+        self::assertSame(2, $data['page']);
+        self::assertSame(3, $data['total']);
+        self::assertSame(2, $data['totalPages']);
+
+        $items = $data['items'];
+
+        self::assertIsArray($items);
+        self::assertCount(1, $items);
+
+        self::assertSame(['product-c'], $this->slugs($items));
+    }
+
+    public function testItSupportsACustomPerPage(): void
+    {
+        $this->createProduct('product-a');
+        $this->createProduct('product-b');
+        $this->createProduct('product-c');
+
+        $data = $this->getJson('/api/products?perPage=1');
+
+        $this->assertOk();
+
+        self::assertSame(1, $data['perPage']);
+        self::assertSame(3, $data['total']);
+        self::assertSame(3, $data['totalPages']);
+
+        $items = $data['items'];
+
+        self::assertIsArray($items);
+        self::assertCount(1, $items);
+    }
+
+    public function testItReturnsAnEmptyPageBeyondTheEnd(): void
+    {
+        $this->createProduct('playstation-5', 'PlayStation 5');
+
+        $data = $this->getJson('/api/products?page=5&perPage=20');
+
+        $this->assertOk();
+
+        self::assertSame(5, $data['page']);
+        self::assertSame(1, $data['total']);
+        self::assertSame(1, $data['totalPages']);
+        self::assertSame([], $data['items']);
+    }
+
+    public function testItRejectsANonPositivePage(): void
+    {
+        $this->client->request('GET', '/api/products?page=0');
+
+        $this->assertStatusCode(422);
+    }
+
+    public function testItRejectsANonPositivePerPage(): void
+    {
+        $this->client->request('GET', '/api/products?perPage=0');
+
+        $this->assertStatusCode(422);
+    }
+
+    public function testItRejectsAPerPageAboveTheMaximum(): void
+    {
+        $this->client->request('GET', '/api/products?perPage=101');
+
+        $this->assertStatusCode(422);
+    }
+
+    private function createProduct(string $slug, ?string $name = null): void
+    {
+        $this->postJson('/api/products', [
+            'name' => $name ?? ucfirst($slug),
+            'slug' => $slug,
+            'priceAmount' => 1000,
+            'currency' => 'EUR',
+            'description' => null,
+        ]);
+
+        $this->assertCreated();
+    }
+
+    /**
+     * @param array<mixed, mixed> $items
+     *
+     * @return list<mixed>
+     */
+    private function slugs(array $items): array
+    {
+        $slugs = [];
+
+        foreach ($items as $item) {
+            /* @var array<string, mixed> $item */
+            $slugs[] = $item['slug'];
+        }
+
+        return $slugs;
     }
 
     private function repository(): ProductRepositoryInterface

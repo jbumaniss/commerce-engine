@@ -41,12 +41,22 @@ final readonly class DoctrineProductRepository implements ProductRepositoryInter
             ]);
     }
 
-    public function findAllActive(): array
+    public function findActive(int $limit, int $offset): array
     {
         return $this->entityManager
             ->getRepository(Product::class)
-            ->findBy([
-                'isActive' => true,
-            ]);
+            ->findBy(
+                ['isActive' => true],
+                ['id' => 'ASC'],
+                $limit,
+                $offset,
+            );
+    }
+
+    public function countActive(): int
+    {
+        return $this->entityManager
+            ->getRepository(Product::class)
+            ->count(['isActive' => true]);
     }
 }
