@@ -14,6 +14,10 @@ services:
         autowire: true      # Automatically injects dependencies in your services.
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
 
+    _instanceof:
+        App\Notification\Application\NotificationChannel:
+            tags: ['app.notification_channel']
+
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
     App\:
@@ -31,8 +35,15 @@ services:
         arguments:
             $eventBus: '@event.bus'
 
-    App\Notification\Application\ProductCreatedEmailNotifier:
+    App\Notification\Application\Notifier:
+        arguments:
+            $channels: !tagged_iterator app.notification_channel
+
+    App\Notification\Infrastructure\EmailChannel:
         arguments:
             $fromEmail: '%env(MAILER_FROM_EMAIL)%'
+
+    App\Notification\Application\ProductCreatedNotifier:
+        arguments:
             $recipientEmail: '%env(PRODUCT_NOTIFICATION_EMAIL)%'
             $locale: '%kernel.default_locale%'
