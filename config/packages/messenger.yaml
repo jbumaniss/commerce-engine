@@ -12,7 +12,14 @@ framework:
         transports:
             # Async processing transport (CE-020): Redis for local/dev. The DSN is env-driven
             # so the transport can be swapped (e.g. an SQS-compatible one) by configuration only.
-            async: '%env(MESSENGER_TRANSPORT_DSN)%'
+            async:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                # Retry transient failures with exponential backoff: 1s, 2s, 4s (capped at 10s).
+                retry_strategy:
+                    max_retries: 3
+                    delay: 1000
+                    multiplier: 2
+                    max_delay: 10000
         routing:
             App\Catalog\Domain\Event\ProductWasCreated: async
 
@@ -20,5 +27,7 @@ when@test:
     framework:
         messenger:
             # In-process transport: the suite exercises async routing without a live broker.
+            # Only the DSN is overridden, so the retry strategy above still applies.
             transports:
-                async: 'in-memory://'
+                async:
+                    dsn: 'in-memory://'
