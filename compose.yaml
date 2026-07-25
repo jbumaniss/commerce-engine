@@ -16,6 +16,7 @@ services:
       # Async messaging transport (Symfony Messenger). Redis for local/dev; env-driven so the
       # transport can be swapped (e.g. an SQS-compatible one) by configuration only.
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
+      MESSENGER_FAILED_TRANSPORT_DSN: redis://redis:6379/failed
     volumes:
       - caddy_data:/data
       - caddy_config:/config
