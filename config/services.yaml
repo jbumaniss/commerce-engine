@@ -35,3 +35,4 @@ services:
         arguments:
             $fromEmail: '%env(MAILER_FROM_EMAIL)%'
             $recipientEmail: '%env(PRODUCT_NOTIFICATION_EMAIL)%'
+            $locale: '%kernel.default_locale%'
