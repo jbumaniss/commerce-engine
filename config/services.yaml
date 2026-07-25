@@ -30,3 +30,8 @@ services:
     App\Shared\Application\EventBus:
         arguments:
             $eventBus: '@event.bus'
+
+    App\Notification\Application\ProductCreatedEmailNotifier:
+        arguments:
+            $fromEmail: '%env(MAILER_FROM_EMAIL)%'
+            $recipientEmail: '%env(PRODUCT_NOTIFICATION_EMAIL)%'
