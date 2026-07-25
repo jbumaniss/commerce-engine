@@ -4,6 +4,8 @@ framework:
         #  - command.bus: synchronous, exactly one handler per command (writes).
         #  - event.bus: domain events, zero or more handlers.
         default_bus: command.bus
+        # Messages that exhaust their retries are routed to a dead-letter transport (CE-023).
+        failure_transport: failed
         buses:
             command.bus: ~
             event.bus:
@@ -20,14 +22,19 @@ framework:
                     delay: 1000
                     multiplier: 2
                     max_delay: 10000
+            # Dead-letter transport for messages that exhaust their retries (CE-023).
+            failed:
+                dsn: '%env(MESSENGER_FAILED_TRANSPORT_DSN)%'
         routing:
             App\Catalog\Domain\Event\ProductWasCreated: async
 
 when@test:
     framework:
         messenger:
-            # In-process transport: the suite exercises async routing without a live broker.
-            # Only the DSN is overridden, so the retry strategy above still applies.
+            # In-process transports: the suite exercises async routing and dead-lettering
+            # without a live broker. Only the DSNs are overridden, so the strategy above applies.
             transports:
                 async:
+                    dsn: 'in-memory://'
+                failed:
                     dsn: 'in-memory://'
