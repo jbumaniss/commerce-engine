@@ -8,7 +8,7 @@ use App\Catalog\Domain\Entity\Product;
 use App\Catalog\Domain\Repository\ProductRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-#[AsMessageHandler]
+#[AsMessageHandler(bus: 'command.bus')]
 final readonly class ChangeProductActivationHandler
 {
     public function __construct(

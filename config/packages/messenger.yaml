@@ -1,8 +1,24 @@
 framework:
     messenger:
-        # A single, synchronous command bus: with no transports configured, dispatched
-        # commands are handled in-process within the same request (CE-018). Asynchronous
-        # transports are introduced later (CE-020+).
+        # CQRS bus separation (CE-019):
+        #  - command.bus: synchronous, exactly one handler per command (writes).
+        #  - event.bus: domain events, zero or more handlers.
+        # The event bus is the asynchronous seam. Its real broker transport (Redis) is
+        # configured in CE-020, so outside of tests events are published but not yet routed
+        # to a transport.
         default_bus: command.bus
         buses:
             command.bus: ~
+            event.bus:
+                default_middleware:
+                    allow_no_handlers: true
+
+when@test:
+    framework:
+        messenger:
+            # A broker-less in-memory transport lets tests assert that domain events are
+            # published asynchronously, without standing in for the CE-020 production transport.
+            transports:
+                events: 'in-memory://'
+            routing:
+                App\Catalog\Domain\Event\ProductWasCreated: events
