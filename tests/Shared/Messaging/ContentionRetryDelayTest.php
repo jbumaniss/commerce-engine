@@ -61,10 +61,34 @@ final class ContentionRetryDelayTest extends KernelTestCase
 
         self::assertNotNull($delay, 'The redelivery must carry an explicit delay, not fire immediately.');
 
-        // Exactly 500ms: no jitter and no fallback to the async transport's own retry_strategy
+        // Exactly 5000ms: no jitter and no fallback to the async transport's own retry_strategy
         // (configured at delay:1000/multiplier:2 — a materially different value), proving the
         // delay is the middleware's own and not inherited from unrelated transport config.
-        self::assertSame(500, $delay->getDelay());
+        self::assertSame(5000, $delay->getDelay());
+    }
+
+    public function testTheWorstCaseRetryCountForAStuckClaimStaysBounded(): void
+    {
+        // Regression guard: if CLAIM_TTL or CONTENTION_RETRY_DELAY_MS is ever changed without
+        // considering the other, this catches a reintroduced excessive retry count (e.g. the
+        // original 500ms delay against a 300s TTL produced 600 worst-case retries — a message
+        // stuck behind a crashed worker's claim would be retried roughly twice a second for up
+        // to five minutes). The bound below (100) is generous headroom over the current design
+        // value (60), not itself the target.
+        $middleware = new \ReflectionClass(DeduplicatingMiddleware::class);
+        $claimTtlSeconds = $middleware->getConstant('CLAIM_TTL');
+        $delayMs = $middleware->getConstant('CONTENTION_RETRY_DELAY_MS');
+
+        self::assertIsFloat($claimTtlSeconds);
+        self::assertIsInt($delayMs);
+
+        $worstCaseRetries = ($claimTtlSeconds * 1000) / $delayMs;
+
+        self::assertLessThanOrEqual(
+            100,
+            $worstCaseRetries,
+            'A message stuck behind an expired claim would be retried too often before the claim expires.',
+        );
     }
 
     /**

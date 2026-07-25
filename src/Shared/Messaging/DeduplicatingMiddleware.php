@@ -43,12 +43,22 @@ final readonly class DeduplicatingMiddleware implements MiddlewareInterface
     private const float CLAIM_TTL = 300.0;
 
     /**
-     * Fixed backoff for a message that lost the claim race. Handling is typically sub-second,
-     * so this stays short; it is intentionally flat (not exponential) — the claim is released
-     * as soon as the winner finishes, so there is nothing to back off from further, and adding
-     * a bespoke growing-delay strategy here would be an unnecessary retry subsystem.
+     * Fixed backoff for a message that lost the claim race. It is intentionally flat (not
+     * exponential) — the claim is released as soon as the winner finishes, so there is nothing
+     * to back off from further, and a bespoke growing-delay strategy here would be an
+     * unnecessary retry subsystem.
+     *
+     * Value chosen against the worst case, not the typical case: if the claim holder crashes
+     * without releasing, the loser retries until CLAIM_TTL expires. At a naively short delay
+     * (e.g. 500ms) that worst case is CLAIM_TTL / delay = 300s / 0.5s = 600 retries per stuck
+     * message — a sustained ~2 req/s hammering Redis, the log and the transport for up to five
+     * minutes, multiplied by however many messages are stuck at once. At 5000ms the same worst
+     * case is 300s / 5s = 60 retries (~1 every 5s): a 10x reduction in worst-case volume. The
+     * cost is added latency in the rare *genuine* near-simultaneous-duplicate case (the loser
+     * waits up to 5s before rechecking instead of 0.5s), which is acceptable here — this is
+     * async, eventually-consistent event processing with nothing synchronously waiting on it.
      */
-    private const int CONTENTION_RETRY_DELAY_MS = 500;
+    private const int CONTENTION_RETRY_DELAY_MS = 5000;
 
     public function __construct(
         private CacheItemPoolInterface $messengerDeduplicationCache,
