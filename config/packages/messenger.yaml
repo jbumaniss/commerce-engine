@@ -11,6 +11,9 @@ framework:
             event.bus:
                 default_middleware:
                     allow_no_handlers: true
+                # Deduplicate redelivered messages so async handlers are idempotent (CE-025).
+                middleware:
+                    - App\Shared\Messaging\DeduplicatingMiddleware
         transports:
             # Async processing transport (CE-020): Redis for local/dev. The DSN is env-driven
             # so the transport can be swapped (e.g. an SQS-compatible one) by configuration only.

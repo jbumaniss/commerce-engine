@@ -17,6 +17,7 @@ services:
       # transport can be swapped (e.g. an SQS-compatible one) by configuration only.
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_TRANSPORT_DSN: redis://redis:6379/failed
+      REDIS_URL: redis://redis:6379
     volumes:
       - caddy_data:/data
       - caddy_config:/config
