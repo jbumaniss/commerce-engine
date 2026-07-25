@@ -48,7 +48,7 @@ final class CreateProductEventTest extends KernelTestCase
 
     private function eventTransport(): InMemoryTransport
     {
-        $transport = self::getContainer()->get('messenger.transport.events');
+        $transport = self::getContainer()->get('messenger.transport.async');
 
         self::assertInstanceOf(InMemoryTransport::class, $transport);
 
