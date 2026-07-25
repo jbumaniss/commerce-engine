@@ -1,0 +1,10 @@
+framework:
+    # Redis-backed locks over the existing REDIS_URL infrastructure. Used for the atomic
+    # cross-worker message-deduplication claim (CE-025).
+    lock: '%env(REDIS_URL)%'
+
+when@test:
+    framework:
+        # Local file locks: the suite runs without a broker. TTL-based expiry of stale
+        # claims is a property of the Redis store, verified in dev.
+        lock: 'flock'

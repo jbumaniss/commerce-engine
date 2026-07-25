@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Notification\Infrastructure;
 
+use App\Notification\Domain\EmailNotification;
+use App\Notification\Domain\Notification;
 use App\Notification\Domain\ProductCreatedNotification;
 use App\Notification\Infrastructure\EmailChannel;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
@@ -32,6 +34,36 @@ final class EmailChannelTest extends KernelTestCase
 
         $this->render($email);
         self::assertStringContainsString('Un nouveau produit (ID : 7) a été créé.', (string) $email->getTextBody());
+    }
+
+    public function testItRejectsANotificationThatIsNotAnEmailNotification(): void
+    {
+        $mailer = $this->createMock(MailerInterface::class);
+        $mailer->expects(self::never())->method('send');
+
+        $channel = new EmailChannel($mailer, 'no-reply@example.test');
+
+        $notification = new class implements Notification {
+            public function recipient(): string
+            {
+                return 'someone@example.test';
+            }
+
+            public function channels(): array
+            {
+                return ['email'];
+            }
+        };
+
+        try {
+            $channel->send($notification);
+            self::fail('An incompatible notification must not be silently ignored.');
+        } catch (\InvalidArgumentException $exception) {
+            // The message names the channel, the required interface, and the received type.
+            self::assertStringContainsString('"email"', $exception->getMessage());
+            self::assertStringContainsString(EmailNotification::class, $exception->getMessage());
+            self::assertStringContainsString($notification::class, $exception->getMessage());
+        }
     }
 
     private function send(ProductCreatedNotification $notification): TemplatedEmail
