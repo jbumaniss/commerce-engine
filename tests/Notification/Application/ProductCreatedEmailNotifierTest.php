@@ -6,14 +6,39 @@ namespace App\Tests\Notification\Application;
 
 use App\Catalog\Domain\Event\ProductWasCreated;
 use App\Notification\Application\ProductCreatedEmailNotifier;
-use PHPUnit\Framework\TestCase;
+use Symfony\Bridge\Twig\Mime\TemplatedEmail;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mime\Email;
+use Symfony\Component\Mime\BodyRendererInterface;
 use Symfony\Component\Mime\RawMessage;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
-final class ProductCreatedEmailNotifierTest extends TestCase
+final class ProductCreatedEmailNotifierTest extends KernelTestCase
 {
-    public function testItSendsANotificationEmailForACreatedProduct(): void
+    public function testItRendersALocalisedEmailFromTemplates(): void
+    {
+        $email = $this->notify(42, 'en');
+
+        self::assertSame('New product created', $email->getSubject());
+
+        $this->render($email);
+
+        self::assertStringContainsString('A new product (ID: 42) has been created.', (string) $email->getTextBody());
+        self::assertStringContainsString('42', (string) $email->getHtmlBody());
+    }
+
+    public function testItLocalisesTheEmailForAnotherLocale(): void
+    {
+        $email = $this->notify(7, 'fr');
+
+        self::assertSame('Nouveau produit créé', $email->getSubject());
+
+        $this->render($email);
+
+        self::assertStringContainsString('Un nouveau produit (ID : 7) a été créé.', (string) $email->getTextBody());
+    }
+
+    private function notify(int $productId, string $locale): TemplatedEmail
     {
         $captured = null;
 
@@ -24,14 +49,29 @@ final class ProductCreatedEmailNotifierTest extends TestCase
                 $captured = $message;
             });
 
-        $notifier = new ProductCreatedEmailNotifier($mailer, 'no-reply@example.test', 'catalog@example.test');
+        $translator = self::getContainer()->get(TranslatorInterface::class);
+        self::assertInstanceOf(TranslatorInterface::class, $translator);
 
-        $notifier(new ProductWasCreated(42));
+        $notifier = new ProductCreatedEmailNotifier(
+            $mailer,
+            $translator,
+            'no-reply@example.test',
+            'catalog@example.test',
+            $locale,
+        );
 
-        self::assertInstanceOf(Email::class, $captured);
-        self::assertSame('New product created', $captured->getSubject());
-        self::assertSame('catalog@example.test', $captured->getTo()[0]->getAddress());
-        self::assertSame('no-reply@example.test', $captured->getFrom()[0]->getAddress());
-        self::assertStringContainsString('42', (string) $captured->getTextBody());
+        $notifier(new ProductWasCreated($productId));
+
+        self::assertInstanceOf(TemplatedEmail::class, $captured);
+
+        return $captured;
+    }
+
+    private function render(TemplatedEmail $email): void
+    {
+        $renderer = self::getContainer()->get(BodyRendererInterface::class);
+        self::assertInstanceOf(BodyRendererInterface::class, $renderer);
+
+        $renderer->render($email);
     }
 }

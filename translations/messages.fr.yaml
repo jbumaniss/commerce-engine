@@ -1,0 +1,4 @@
+email:
+    product_created:
+        subject: 'Nouveau produit créé'
+        body: 'Un nouveau produit (ID : %id%) a été créé.'
