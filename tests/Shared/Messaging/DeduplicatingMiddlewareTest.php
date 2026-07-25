@@ -6,6 +6,7 @@ namespace App\Tests\Shared\Messaging;
 
 use App\Shared\Messaging\DeduplicatingMiddleware;
 use App\Shared\Messaging\IdempotencyStamp;
+use App\Tests\Support\CallbackTerminal;
 use App\Tests\Support\CountingMiddleware;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -173,23 +174,5 @@ final class DeduplicatingMiddlewareTest extends TestCase
         $stack->method('next')->willReturn($next);
 
         return $stack;
-    }
-}
-
-/**
- * Test double: a terminal middleware running a callback, used to interleave a competing
- * consumer inside an in-flight handling and to simulate handler failures.
- */
-final readonly class CallbackTerminal implements MiddlewareInterface
-{
-    public function __construct(private \Closure $callback)
-    {
-    }
-
-    public function handle(Envelope $envelope, StackInterface $stack): Envelope
-    {
-        ($this->callback)();
-
-        return $envelope;
     }
 }

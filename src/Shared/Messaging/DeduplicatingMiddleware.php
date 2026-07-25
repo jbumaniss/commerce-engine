@@ -26,6 +26,13 @@ use Symfony\Component\Messenger\Stamp\ReceivedStamp;
  *  - Remaining window: a worker that crashes after the handlers ran but before the marker was
  *    written will cause one re-execution on redelivery; the claim TTL also bounds how long a
  *    crashed worker can block a message.
+ *
+ * Losing the claim race is reported as a RecoverableMessageHandlingException carrying an
+ * explicit retry delay (CONTENTION_RETRY_DELAY_MS): without it, the delay would silently fall
+ * back to the async transport's business retry_strategy (CE-022), coupling this concurrency
+ * concern to an unrelated failure-handling policy that is free to change independently. The
+ * exception's default forceRetry=true means contention bypasses the transport's max_retries, so
+ * it can never exhaust retries into the dead-letter queue on its own.
  */
 final readonly class DeduplicatingMiddleware implements MiddlewareInterface
 {
@@ -34,6 +41,14 @@ final readonly class DeduplicatingMiddleware implements MiddlewareInterface
      * a single handling's duration; kept far below the completion marker's lifetime.
      */
     private const float CLAIM_TTL = 300.0;
+
+    /**
+     * Fixed backoff for a message that lost the claim race. Handling is typically sub-second,
+     * so this stays short; it is intentionally flat (not exponential) — the claim is released
+     * as soon as the winner finishes, so there is nothing to back off from further, and adding
+     * a bespoke growing-delay strategy here would be an unnecessary retry subsystem.
+     */
+    private const int CONTENTION_RETRY_DELAY_MS = 500;
 
     public function __construct(
         private CacheItemPoolInterface $messengerDeduplicationCache,
@@ -64,7 +79,7 @@ final readonly class DeduplicatingMiddleware implements MiddlewareInterface
         if (!$claim->acquire()) {
             // Another worker is handling this exact message right now. Defer instead of
             // skipping: if that worker fails, this redelivery must still be able to run.
-            throw new RecoverableMessageHandlingException(sprintf('Message "%s" is currently being processed by another worker.', $stamp->id));
+            throw new RecoverableMessageHandlingException(sprintf('Message "%s" is currently being processed by another worker.', $stamp->id), retryDelay: self::CONTENTION_RETRY_DELAY_MS);
         }
 
         try {
