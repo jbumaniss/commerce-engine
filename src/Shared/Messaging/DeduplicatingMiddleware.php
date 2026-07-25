@@ -5,23 +5,39 @@ declare(strict_types=1);
 namespace App\Shared\Messaging;
 
 use Psr\Cache\CacheItemPoolInterface;
+use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\Exception\RecoverableMessageHandlingException;
 use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Symfony\Component\Messenger\Middleware\StackInterface;
 use Symfony\Component\Messenger\Stamp\ReceivedStamp;
 
 /**
- * Makes async processing idempotent (CE-025): when a message carrying an {@see IdempotencyStamp}
- * is consumed from a transport, it is handled at most once. A redelivery of an already-processed
- * message is skipped, so at-least-once delivery is safe.
+ * Deduplicates consumed messages carrying an {@see IdempotencyStamp} (CE-025).
  *
- * The processed id is recorded only after successful handling, so a failed handling is still
- * retried (the message is not yet marked as processed).
+ * Guarantee — at-least-once delivery with duplicate suppression, not exactly-once:
+ *  - After a delivery has been handled successfully, later redeliveries of the same message id
+ *    are acknowledged without running the handlers again (until the completion marker expires).
+ *  - Concurrent duplicate deliveries cannot both run: workers race for an atomic, TTL-bounded
+ *    claim (Redis lock); the loser is deferred with a recoverable exception, so Messenger
+ *    redelivers it later — by then it is either suppressed (winner succeeded) or processed
+ *    (winner failed and released the claim).
+ *  - A failed handling releases the claim without writing the marker, so retries keep working.
+ *  - Remaining window: a worker that crashes after the handlers ran but before the marker was
+ *    written will cause one re-execution on redelivery; the claim TTL also bounds how long a
+ *    crashed worker can block a message.
  */
 final readonly class DeduplicatingMiddleware implements MiddlewareInterface
 {
+    /**
+     * Upper bound on how long a crashed worker's claim can outlive it. Must comfortably exceed
+     * a single handling's duration; kept far below the completion marker's lifetime.
+     */
+    private const float CLAIM_TTL = 300.0;
+
     public function __construct(
         private CacheItemPoolInterface $messengerDeduplicationCache,
+        private LockFactory $lockFactory,
     ) {
     }
 
@@ -34,18 +50,41 @@ final readonly class DeduplicatingMiddleware implements MiddlewareInterface
             return $stack->next()->handle($envelope, $stack);
         }
 
-        $item = $this->messengerDeduplicationCache->getItem($this->key($stamp->id));
+        $key = $this->key($stamp->id);
 
-        if ($item->isHit()) {
+        if ($this->messengerDeduplicationCache->getItem($key)->isHit()) {
             // Already processed by an earlier delivery: acknowledge without handling again.
             return $envelope;
         }
 
-        $envelope = $stack->next()->handle($envelope, $stack);
+        // Atomic cross-worker claim (Redis SET NX under the hood): at most one worker may
+        // process this message id at a time.
+        $claim = $this->lockFactory->createLock('messenger_dedup_claim_'.$stamp->id, self::CLAIM_TTL);
 
-        $this->messengerDeduplicationCache->save($item->set(true));
+        if (!$claim->acquire()) {
+            // Another worker is handling this exact message right now. Defer instead of
+            // skipping: if that worker fails, this redelivery must still be able to run.
+            throw new RecoverableMessageHandlingException(sprintf('Message "%s" is currently being processed by another worker.', $stamp->id));
+        }
 
-        return $envelope;
+        try {
+            // Re-check under the claim: the concurrent holder may have completed between the
+            // first check and our acquisition.
+            $item = $this->messengerDeduplicationCache->getItem($key);
+
+            if ($item->isHit()) {
+                return $envelope;
+            }
+
+            $envelope = $stack->next()->handle($envelope, $stack);
+
+            // Marked only after success, so a failed handling stays retryable.
+            $this->messengerDeduplicationCache->save($item->set(true));
+
+            return $envelope;
+        } finally {
+            $claim->release();
+        }
     }
 
     private function key(string $id): string
