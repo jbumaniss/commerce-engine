@@ -24,3 +24,9 @@ services:
 
     App\Catalog\Domain\Repository\ProductRepositoryInterface:
         alias: App\Catalog\Infrastructure\Persistence\DoctrineProductRepository
+
+    # Bind the dedicated event bus to the EventBus wrapper (the command bus is the
+    # default_bus, so CommandBus autowires it without explicit binding).
+    App\Shared\Application\EventBus:
+        arguments:
+            $eventBus: '@event.bus'

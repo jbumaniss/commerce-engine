@@ -6,14 +6,17 @@ namespace App\Catalog\Application\Command;
 
 use App\Catalog\Application\Exception\ProductSlugAlreadyExists;
 use App\Catalog\Domain\Entity\Product;
+use App\Catalog\Domain\Event\ProductWasCreated;
 use App\Catalog\Domain\Repository\ProductRepositoryInterface;
+use App\Shared\Application\EventBus;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-#[AsMessageHandler]
+#[AsMessageHandler(bus: 'command.bus')]
 final readonly class CreateProductHandler
 {
     public function __construct(
         private ProductRepositoryInterface $products,
+        private EventBus $events,
     ) {
     }
 
@@ -32,6 +35,11 @@ final readonly class CreateProductHandler
         );
 
         $this->products->save($product);
+
+        $id = $product->id();
+        \assert(null !== $id);
+
+        $this->events->dispatch(new ProductWasCreated($id));
 
         return $product;
     }

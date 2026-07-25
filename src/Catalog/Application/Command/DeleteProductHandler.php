@@ -7,7 +7,7 @@ namespace App\Catalog\Application\Command;
 use App\Catalog\Domain\Repository\ProductRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-#[AsMessageHandler]
+#[AsMessageHandler(bus: 'command.bus')]
 final readonly class DeleteProductHandler
 {
     public function __construct(
